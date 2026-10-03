@@ -8,12 +8,14 @@ Voraussetzung ist ein Klon des Repos auf dem SQL-Server-Host, z. B. unter
 ```bat
 cd /d L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\install
 sqlcmd -S EVHNT56 -E -b -i Install.sql ^
-       -v AdminDb="DDL_Export_Admin" ExportRoot="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export"
+       -v AdminDb="DDL_Export_Admin" ExportRoot="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export" Environment="PROD"
 ```
 
 * `Install.sql` lässt sich beliebig oft ausführen, auch für Updates. Tabellen werden nur
   angelegt, wenn sie fehlen. Prozeduren und Funktionen werden mit `CREATE OR ALTER`
   aktualisiert. Bestehende Einstellungen wie `ExportRoot` werden **nicht** überschrieben.
+* `Environment` legt die Umgebung dieses Servers fest (`PROD`, `TEST`, …). Auf jedem
+  Server wird das Package mit seiner eigenen Admin-DB installiert.
 * sqlcmd muss im Ordner `src\install` gestartet werden, weil die `:r`-Includes relativ sind.
 * In SSMS: SQLCMD-Modus aktivieren und die `:setvar`-Zeilen am Anfang von `Install.sql`
   einkommentieren.
@@ -25,10 +27,10 @@ Alle Einstellungen liegen in der Admin-DB `DDL_Export_Admin`, Schema `ddl`.
 
 | Tabelle | Zweck |
 |---|---|
-| `ddl.ExportDatabase` | Diese Datenbanken werden exportiert, und **nur** diese (`IsActive = 1`). `FolderName` setzt optional einen anderen Ordnernamen. |
+| `ddl.ExportDatabase` | Diese Datenbanken werden exportiert, und **nur** diese (`IsActive = 1`). Optional: `FolderName` (anderer Ordnername, z. B. wenn die Test-DB anders heißt) und `Environment` (Umgebung abweichend vom Server-Standard). |
 | `ddl.ExportConfigTable` | Diese Tabellen werden **mit Inhalt** exportiert, als `DELETE` + `INSERT`, sortiert nach PK. Optional: `OrderByColumns`, `ExcludeColumns`, `MaskColumns` (jeweils kommagetrennt). |
 | `ddl.ExportJob` | LIKE-Muster für Agent-Jobs. Ohne Eintrag werden keine Jobs exportiert. |
-| `ddl.ExportSetting` | `ExportRoot` (Zielpfad), `ExportMode` (`Export`, `DriftCheck`, `Off`), `ConfigDataMaxRows` (Standard 10000) |
+| `ddl.ExportSetting` | `ExportRoot` (Zielpfad), `Environment` (Umgebung des Servers), `ServerLabel` (Servername für `_Server/…`, leer = `@@SERVERNAME`), `ExportMode` (`Export`, `DriftCheck`, `Off`), `ConfigDataMaxRows` (Standard 10000) |
 
 Beispiele:
 
@@ -44,6 +46,37 @@ UPDATE ddl.ExportDatabase SET IsActive = 0 WHERE DatabaseName = N'Test';   -- Da
 **Maskierung:** Bei Textspalten wird der Wert durch `N'***'` ersetzt, bei allen anderen
 Typen durch `NULL`. Passwörter, Tokens und personenbezogene Daten gehören maskiert oder
 ausgeschlossen, denn das Repo ist keine sichere Ablage für Geheimnisse.
+
+## 2a. Ablage und mehrere Server (Prod/Test)
+
+```
+export/
+  <DB>/<Umgebung>/              z. B. BAG/PROD, BAG/TEST
+    database.json               Server, Umgebung, Kompatibilitätslevel, Collation
+    catalog.jsonl               Agenten-Katalog
+    Schemas/ Types/ Sequences/ Synonyms/ Tables/ Views/ StoredProcedures/ Functions/ Triggers/
+    ConfigData/                 Inhalte der Konfig-Tabellen
+    Jobs/                       Agent-Jobs, deren T-SQL-Steps alle in dieser DB laufen
+  _Server/<Umgebung>/<Server>/
+    Jobs/                       übrige Agent-Jobs dieses Servers (CmdExec, mehrere DBs)
+    manifest.txt                Ordner, die dieser Server verwaltet
+```
+
+* **Ein Repo, ein Branch, mehrere Server:** Jeder Server hat einen eigenen Klon und eine
+  eigene Admin-DB und schreibt nur in seine Ordner `<DB>/<Umgebung>`.
+* **Manifest:** `_Server/<Umgebung>/<Server>/manifest.txt` listet diese Ordner. Der Writer
+  löscht und meldet Drift nur dort, bezogen auf das alte und das neue Manifest. Ordner
+  anderer Server fasst er nie an.
+* **Ablauf je Server (manuell):** `git pull`, Job laufen lassen (oder auf den nächtlichen Lauf
+  warten), dann `git add export/` → `git commit` → `git push`. Weil sich die Ordner nicht
+  überschneiden, gibt es keine Konflikte.
+* **Gleiche DB, anderer Name auf Test:** Mit `FolderName` landen beide im selben Ordner, z. B.
+  `INSERT ddl.ExportDatabase (DatabaseName, FolderName) VALUES (N'BAG_Test', N'BAG');` auf dem
+  Testserver ergibt `export/BAG/TEST`.
+* **Vergleich:** `git diff --no-index export/BAG/PROD export/BAG/TEST`, oder ein Ordnervergleich
+  in VS Code bzw. WinMerge.
+* Wechselt `Environment` oder `ServerLabel`, ändert sich auch der Manifest-Pfad. Die alten
+  Ordner dann einmalig von Hand entfernen.
 
 ## 3. Agent-Job
 
@@ -108,7 +141,8 @@ Step 2 läuft unter dem **SQL-Agent-Dienstkonto** oder einem CmdExec-Proxy. Es b
 1. Letzten Export prüfen und committen. Danach ist `git status` sauber.
 2. `UPDATE ddl.ExportSetting SET SettingValue = N'DriftCheck' WHERE SettingKey = 'ExportMode';`
 3. Ab jetzt werden DDL-Änderungen im Repo gepflegt (Review, Commit) und dann auf die DB
-   ausgerollt. Der nächtliche Job meldet jede Abweichung zwischen DB und Repo:
+   ausgerollt. Eine Änderung kommt erst nach `<DB>/TEST`, wird dort ausgerollt und geprüft und
+   danach nach `<DB>/PROD` übernommen. Der nächtliche Job meldet jede Abweichung zwischen DB und Repo:
 
    | Meldung | Bedeutung |
    |---|---|
@@ -153,7 +187,7 @@ SELECT RelativePath, ObjectType, LEN(Content) AS Laenge FROM ddl.ExportScript OR
   Neuaufbau einer DB gilt die Reihenfolge Schemas → Types → Sequences → Historientabellen →
   Tabellen (FKs ggf. nachziehen) → Views → Functions → Procedures → Trigger → Synonyme →
   ConfigData. Ein Beispiel steht in `tests/run_tests.sh`.
-* `Jobs/*.sql` enthalten das Agent-Token `$(ESCAPE_NONE(SRVR))`. Mit sqlcmd daher mit `-x`
+* Job-Skripte (`Jobs/*.sql`) enthalten das Agent-Token `$(ESCAPE_NONE(SRVR))`. Mit sqlcmd daher mit `-x`
   ausführen (keine Variablenersetzung) oder in SSMS ohne SQLCMD-Modus.
 * Konfig-Daten: `sql_variant` wird als Text exportiert. `hierarchyid`, `geometry` und
   `geography` werden binär (`0x...`) exportiert.

@@ -17,13 +17,13 @@ GO
 CREATE OR ALTER PROCEDURE ddl.usp_Script_Catalog
     @RunId        int,
     @DatabaseName sysname,
-    @FolderName   nvarchar(128)
+    @BasePath     nvarchar(400)   -- <Ordner>/<Umgebung>/ (vom Orchestrator)
 AS
 BEGIN
     SET NOCOUNT ON;
 
     DECLARE @nl   nchar(2)      = NCHAR(13) + NCHAR(10);
-    DECLARE @base nvarchar(200) = N'Databases/' + ddl.fn_FileName(@FolderName) + N'/';
+    DECLARE @base nvarchar(400) = @BasePath;
 
     CREATE TABLE #Line (SortType int NOT NULL, SchemaName sysname NULL, ObjectName sysname NOT NULL, Line nvarchar(max) NOT NULL);
 

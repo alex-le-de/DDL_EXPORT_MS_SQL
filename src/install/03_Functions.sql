@@ -85,6 +85,22 @@ BEGIN
 END;
 GO
 
+/*
+    Exportziele der aktiven Datenbanken: <Ordner>/<Umgebung>/
+    Ordner = FolderName oder DatabaseName, Umgebung = Environment der DB oder Standard.
+*/
+CREATE OR ALTER FUNCTION ddl.fn_ExportTarget (@DefaultEnvironment varchar(20))
+RETURNS TABLE
+AS
+RETURN
+    SELECT d.DatabaseName,
+           Environment = ISNULL(NULLIF(d.Environment, ''), @DefaultEnvironment),
+           BasePath    = ddl.fn_FileName(ISNULL(NULLIF(d.FolderName, N''), d.DatabaseName)) + N'/'
+                       + ddl.fn_FileName(ISNULL(NULLIF(d.Environment, ''), @DefaultEnvironment)) + N'/'
+    FROM ddl.ExportDatabase d
+    WHERE d.IsActive = 1;
+GO
+
 /* Kommagetrennte Liste -> Tabelle mit Reihenfolge (getrimmt, ohne Leereintraege, ohne [ ]) */
 CREATE OR ALTER FUNCTION ddl.fn_SplitList (@List nvarchar(4000))
 RETURNS TABLE

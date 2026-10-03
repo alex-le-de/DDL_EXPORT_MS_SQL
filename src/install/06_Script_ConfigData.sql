@@ -19,14 +19,14 @@ GO
 CREATE OR ALTER PROCEDURE ddl.usp_Script_ConfigData
     @RunId        int,
     @DatabaseName sysname,
-    @FolderName   nvarchar(128)
+    @BasePath     nvarchar(400)   -- <Ordner>/<Umgebung>/ (vom Orchestrator)
 AS
 BEGIN
     SET NOCOUNT ON;
 
     DECLARE @nl      nchar(2)      = NCHAR(13) + NCHAR(10);
     DECLARE @sepVal  nvarchar(20)  = N' + N'', '' + ';   -- Trenner der Wert-Ausdruecke
-    DECLARE @base    nvarchar(200) = N'Databases/' + ddl.fn_FileName(@FolderName) + N'/ConfigData/';
+    DECLARE @base    nvarchar(400) = @BasePath + N'ConfigData/';
     DECLARE @exec    nvarchar(400) = QUOTENAME(@DatabaseName) + N'.sys.sp_executesql';
     DECLARE @maxRows bigint        = TRY_CAST((SELECT SettingValue FROM ddl.ExportSetting WHERE SettingKey = 'ConfigDataMaxRows') AS bigint);
     IF @maxRows IS NULL SET @maxRows = 10000;

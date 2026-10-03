@@ -2,6 +2,8 @@
     Seed_Config.sql - Konfiguration des DDL-Exports (beliebig oft ausfuehrbar)
 
     Nur hier eingetragene und aktive Datenbanken werden exportiert.
+    Ablage: export/<FolderName oder DatabaseName>/<Environment>/ ; Environment NULL = Einstellung des Servers.
+    Auf dem Testserver diese Datei mit den dortigen DB-Namen ausfuehren (ggf. FolderName = Prod-Name).
     Konfig-Tabellen: Inhalte werden zusaetzlich zur DDL als INSERT-Skripte exportiert.
     Jobs: nur Agent-Jobs, deren Name auf ein Muster passt (LIKE), werden exportiert.
 

@@ -5,12 +5,19 @@
         Jobs, deren Name auf ein aktives Muster in ddl.ExportJob passt (LIKE).
         Ohne job_id/schedule_uid -> deterministisch und auf anderen Instanzen ausfuehrbar.
         Ergebnis -> Temp-Tabelle #Script.
+
+    Ablage:
+        <Ordner>/<Umgebung>/Jobs/<job>.sql        alle T-SQL-Steps laufen in genau einer
+                                                  exportierten Datenbank
+        _Server/<Umgebung>/<Server>/Jobs/<job>.sql sonst (CmdExec, mehrere/andere DBs)
 */
 USE [$(AdminDb)];
 GO
 
 CREATE OR ALTER PROCEDURE ddl.usp_Script_Jobs
-    @RunId int
+    @RunId       int,
+    @Environment varchar(20),
+    @ServerPath  nvarchar(400)   -- _Server/<Umgebung>/<Server>/
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -19,8 +26,13 @@ BEGIN
 
     CREATE TABLE #Job (JobId uniqueidentifier NOT NULL PRIMARY KEY, JobName sysname NOT NULL, RelativePath nvarchar(400) NOT NULL);
     INSERT INTO #Job (JobId, JobName, RelativePath)
-    SELECT j.job_id, j.name, N'Jobs/' + ddl.fn_FileName(j.name) + N'.sql'
+    SELECT j.job_id, j.name,
+           ISNULL(t.BasePath, @ServerPath) + N'Jobs/' + ddl.fn_FileName(j.name) + N'.sql'
     FROM msdb.dbo.sysjobs j
+    OUTER APPLY (SELECT DbName = CASE WHEN COUNT(DISTINCT s.database_name) = 1 THEN MIN(s.database_name) END
+                 FROM msdb.dbo.sysjobsteps s
+                 WHERE s.job_id = j.job_id AND s.subsystem = N'TSQL' AND s.database_name IS NOT NULL) d
+    LEFT JOIN ddl.fn_ExportTarget(@Environment) t ON t.DatabaseName = d.DbName
     WHERE EXISTS (SELECT 1 FROM ddl.ExportJob x WHERE x.IsActive = 1 AND j.name LIKE x.JobNamePattern);
 
     CREATE TABLE #Stmt (JobId uniqueidentifier NOT NULL, Section int NOT NULL, SortKey nvarchar(400) NOT NULL, Stmt nvarchar(max) NOT NULL);

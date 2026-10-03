@@ -1,7 +1,7 @@
 /*
     10_Settings.sql
     Standardwerte fuer ddl.ExportSetting. Vorhandene Werte werden NICHT ueberschrieben.
-    SQLCMD-Variable: $(ExportRoot)
+    SQLCMD-Variablen: $(ExportRoot), $(Environment)
 */
 USE [$(AdminDb)];
 GO
@@ -9,7 +9,11 @@ GO
 MERGE ddl.ExportSetting AS t
 USING (VALUES
     ('ExportRoot',        N'$(ExportRoot)',
-     N'Lokaler Pfad auf dem SQL-Server-Host: Ordner export im Git-Arbeitsverzeichnis. Der Writer schreibt nach <ExportRoot>\Databases und <ExportRoot>\Jobs.'),
+     N'Lokaler Pfad auf dem SQL-Server-Host: Ordner export im Git-Arbeitsverzeichnis. Ablage: <ExportRoot>\<DB>\<Umgebung>\...'),
+    ('Environment',       N'$(Environment)',
+     N'Umgebung dieses Servers (z. B. PROD, TEST). Zweite Ordnerebene: <ExportRoot>\<DB>\<Umgebung>. Je DB ueberschreibbar (ExportDatabase.Environment).'),
+    ('ServerLabel',       N'',
+     N'Servername im Ordner _Server\<Umgebung>\<Server>. Leer = SERVERPROPERTY(''ServerName'').'),
     ('ExportMode',        N'Export',
      N'Export = Dateien schreiben (DB -> Git); DriftCheck = nur vergleichen und Abweichungen melden (Git ist fuehrend); Off = nichts tun.'),
     ('ConfigDataMaxRows', N'10000',

@@ -27,11 +27,17 @@ CREATE TABLE ddl.ExportDatabase
 (
     DatabaseName    sysname        NOT NULL CONSTRAINT PK_ExportDatabase PRIMARY KEY,
     IsActive        bit            NOT NULL CONSTRAINT DF_ExportDatabase_IsActive DEFAULT (1),
-    FolderName      nvarchar(128)  NULL,      -- Ordnername unter export/Databases; NULL = DatabaseName
+    FolderName      nvarchar(128)  NULL,      -- Ordnername unter export/; NULL = DatabaseName
+    Environment     varchar(20)    NULL,      -- PROD/TEST/...; NULL = Einstellung 'Environment'
     Description     nvarchar(1000) NULL,
     ModifiedAt      datetime2(0)   NOT NULL CONSTRAINT DF_ExportDatabase_ModifiedAt DEFAULT (SYSDATETIME()),
     ModifiedBy      sysname        NOT NULL CONSTRAINT DF_ExportDatabase_ModifiedBy DEFAULT (SUSER_SNAME())
 );
+GO
+
+-- Update von Version 1: Spalte Environment nachruesten
+IF COL_LENGTH(N'ddl.ExportDatabase', N'Environment') IS NULL
+    ALTER TABLE ddl.ExportDatabase ADD Environment varchar(20) NULL;
 GO
 
 IF OBJECT_ID(N'ddl.ExportConfigTable', N'U') IS NULL
@@ -106,7 +112,7 @@ IF OBJECT_ID(N'ddl.ExportScript', N'U') IS NULL
 CREATE TABLE ddl.ExportScript
 (
     RelativePath    nvarchar(400)  NOT NULL CONSTRAINT PK_ExportScript PRIMARY KEY,  -- mit '/' getrennt
-    Scope           sysname        NOT NULL,  -- DB-Name bzw. '(Server)' fuer Jobs
+    Scope           sysname        NOT NULL,  -- DB-Name bzw. '(Server)' fuer Jobs und Manifest
     ObjectType      varchar(30)    NOT NULL,
     SchemaName      sysname        NULL,
     ObjectName      nvarchar(256)  NOT NULL,

@@ -13,14 +13,14 @@ GO
 CREATE OR ALTER PROCEDURE ddl.usp_Script_Objects
     @RunId        int,
     @DatabaseName sysname,
-    @FolderName   nvarchar(128)
+    @BasePath     nvarchar(400)   -- <Ordner>/<Umgebung>/ (vom Orchestrator)
 AS
 BEGIN
     SET NOCOUNT ON;
 
     DECLARE @nl   nchar(2)      = NCHAR(13) + NCHAR(10);
     DECLARE @sepColumn nchar(3) = N',' + NCHAR(13) + NCHAR(10);   -- STRING_AGG verlangt Literal/Variable als Trenner
-    DECLARE @base nvarchar(200) = N'Databases/' + ddl.fn_FileName(@FolderName) + N'/';
+    DECLARE @base nvarchar(400) = @BasePath;
 
     /* Dateien und ihre Anweisungen */
     CREATE TABLE #File

@@ -7,6 +7,9 @@ Wissensbasis für Menschen und KI-Agenten.
   SMO, dbatools und `xp_cmdshell` werden nicht gebraucht.
 * **Gesteuert über eine Admin-DB:** `DDL_Export_Admin` legt fest, welche Datenbanken,
   Konfigurationstabellen (mit Daten) und Agent-Jobs exportiert werden und wohin.
+* **Je DB und Umgebung ein Ordner:** `export/<DB>/<Umgebung>/`, z. B. `export/BAG/PROD` und
+  `export/BAG/TEST`. Mehrere Server (Prod und Test) exportieren in dasselbe Repo, und jeder
+  Server pflegt nur seine eigenen Ordner.
 * **Deterministisch:** Die Dateien enthalten keinen Zeitstempel und sind fest sortiert.
   Ohne DB-Änderung entsteht also kein Git-Diff. Gelöschte Objekte verschwinden auch als Datei.
 * **Für Agenten:** Pro Datenbank gibt es eine `catalog.jsonl`. Sie enthält Tabellen,
@@ -15,16 +18,16 @@ Wissensbasis für Menschen und KI-Agenten.
   dann meldet der Modus `DriftCheck` nur noch Abweichungen.
 
 ```
-SQL Server (lokal)                                   Git-Arbeitsverzeichnis (lokal auf dem Server)
-┌───────────────────────────────┐   Agent-Job        ┌──────────────────────────────────┐
-│ DDL_Export_Admin              │   "DDL_Export"     │ export/Databases/<DB>/Tables/... │
-│  ddl.ExportDatabase  (welche) │ ─ Step 1 T-SQL ──▶ │ export/Databases/<DB>/ConfigData │
-│  ddl.ExportConfigTable (Daten)│   Snapshot         │ export/Databases/<DB>/catalog... │
-│  ddl.ExportJob       (Jobs)   │ ─ Step 2 Writer ─▶ │ export/Jobs/...                  │
-│  ddl.ExportSetting   (Pfad,   │   (PowerShell,     └──────────────────────────────────┘
-│                       Modus)  │    ohne SMO)                 │ git add/commit/push (manuell)
+SQL Server (je Server)                                Git-Arbeitsverzeichnis (lokal auf dem Server)
+┌───────────────────────────────┐   Agent-Job        ┌───────────────────────────────────┐
+│ DDL_Export_Admin              │   "DDL_Export"     │ export/<DB>/PROD/Tables/...       │
+│  ddl.ExportDatabase  (welche) │ ─ Step 1 T-SQL ──▶ │ export/<DB>/PROD/ConfigData/...   │
+│  ddl.ExportConfigTable (Daten)│   Snapshot         │ export/<DB>/PROD/Jobs/...         │
+│  ddl.ExportJob       (Jobs)   │ ─ Step 2 Writer ─▶ │ export/_Server/PROD/<Server>/...  │
+│  ddl.ExportSetting   (Pfad,   │   (PowerShell,     └───────────────────────────────────┘
+│   Umgebung, Modus)            │    ohne SMO)                 │ git pull / commit / push (manuell)
 └───────────────────────────────┘                              ▼
-        ▲ liest per [DB].sys.sp_executesql                  GitHub
+        ▲ liest per [DB].sys.sp_executesql                  GitHub  ◀── Testserver: export/<DB>/TEST/...
   BAG, Belvis_sd_sst, Memi, Messwert, PDB2BELVIS, Statistik, Test
 ```
 
@@ -35,7 +38,7 @@ Repos, z. B. unter `L:\Datenverarbeitung\DDL_EXPORT_MS_SQL`.
 
 ```bat
 cd /d L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\install
-sqlcmd -S EVHNT56 -E -b -i Install.sql -v AdminDb="DDL_Export_Admin" ExportRoot="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export"
+sqlcmd -S EVHNT56 -E -b -i Install.sql -v AdminDb="DDL_Export_Admin" ExportRoot="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export" Environment="PROD"
 
 cd ..\..\config
 REM vorher Seed_Config.sql anpassen (Konfig-Tabellen eintragen)
@@ -44,6 +47,8 @@ sqlcmd -S EVHNT56 -E -b -I -i Seed_Config.sql -v AdminDb="DDL_Export_Admin"
 cd ..\src\job
 sqlcmd -S EVHNT56 -E -b -I -i Create_Job_DDL_Export.sql -v AdminDb="DDL_Export_Admin" WriterScript="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\writer\Write-DdlExport.ps1" JobOwner="sa"
 ```
+
+Auf einem Testserver genauso vorgehen, nur mit `Environment="TEST"`.
 
 Danach den Job `DDL_Export` einmal manuell starten, das Ergebnis unter `export\` prüfen und
 committen. Anschließend den Zeitplan aktivieren. Die Details stehen in
@@ -66,6 +71,15 @@ INSERT ddl.ExportJob (JobNamePattern) VALUES (N'Statistik%');
 UPDATE ddl.ExportSetting SET SettingValue = N'D:\Repos\DDL_EXPORT_MS_SQL\export' WHERE SettingKey = 'ExportRoot';
 UPDATE ddl.ExportSetting SET SettingValue = N'DriftCheck'                        WHERE SettingKey = 'ExportMode';
 ```
+
+## Prod gegen Test vergleichen
+
+```bash
+git diff --no-index export/BAG/PROD export/BAG/TEST     # oder Ordnervergleich in VS Code / WinMerge
+```
+
+Die Pfade unterhalb der Umgebung sind identisch. `database.json` enthält Server, Umgebung,
+Kompatibilitätslevel und Collation.
 
 ## Repo-Struktur
 

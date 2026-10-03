@@ -5,7 +5,7 @@
 
         cd <Repo>\src\install
         sqlcmd -S EVHNT56 -E -b -i Install.sql ^
-               -v AdminDb="DDL_Export_Admin" ExportRoot="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export"
+               -v AdminDb="DDL_Export_Admin" ExportRoot="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export" Environment="PROD"
 
     Alternativ in SSMS: Abfrage > SQLCMD-Modus aktivieren, Arbeitsordner beachten.
 
@@ -15,9 +15,10 @@
 */
 :on error exit
 -- Variablen werden per sqlcmd -v uebergeben (ein :setvar im Skript wuerde -v ueberschreiben).
--- Fuer SSMS (SQLCMD-Modus) die beiden Zeilen einkommentieren und anpassen:
+-- Fuer SSMS (SQLCMD-Modus) die drei Zeilen einkommentieren und anpassen:
 -- :setvar AdminDb    "DDL_Export_Admin"
 -- :setvar ExportRoot "L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export"
+-- :setvar Environment "PROD"
 
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;   -- sqlcmd startet mit QUOTED_IDENTIFIER OFF

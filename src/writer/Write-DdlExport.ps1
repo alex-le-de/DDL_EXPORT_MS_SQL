@@ -15,11 +15,14 @@
       3. Je nach ExportMode:
          Export     - geaenderte/neue Dateien schreiben (UTF-8 ohne BOM, CRLF),
                       unveraenderte Dateien nicht anfassen, Dateien entfernter
-                      Objekte loeschen (nur unter <ExportRoot>\Databases und
-                      <ExportRoot>\Jobs, nur *.sql und *.jsonl).
+                      Objekte loeschen.
          DriftCheck - nichts schreiben; Abweichungen zwischen DB und
                       Arbeitsverzeichnis melden (Exit-Code 2).
          Off        - nichts tun.
+         Geloescht bzw. als Drift gemeldet wird nur in den Ordnern, die dieser
+         Server verwaltet (Manifest _Server\<Umgebung>\<Server>\manifest.txt,
+         alter und neuer Stand) und nur Dateien *.sql, *.jsonl, *.json, *.txt.
+         Ordner anderer Server (z. B. <DB>\TEST neben <DB>\PROD) bleiben unberuehrt.
       4. Ergebnis in ddl.ExportLog (Source = 'Writer') und auf der Konsole
          (Job-Historie) protokollieren.
 
@@ -55,8 +58,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $utf8NoBom   = New-Object System.Text.UTF8Encoding($false)
-$managedDirs = @('Databases', 'Jobs')
-$managedExt  = @('.sql', '.jsonl')
+$managedExt  = @('.sql', '.jsonl', '.json', '.txt')
 
 if (-not $ConnectionString) {
     $ConnectionString = "Server=$SqlInstance;Database=$AdminDatabase;Integrated Security=SSPI;Application Name=DDL_Export_Writer;Connect Timeout=30"
@@ -142,12 +144,38 @@ try {
     }
 
     # --- Snapshot lesen ----------------------------------------------------------
-    $rows = (Invoke-Sql 'SELECT RelativePath, Content FROM ddl.ExportScript ORDER BY RelativePath;').Rows
+    $rows = (Invoke-Sql 'SELECT RelativePath, ObjectType, Content FROM ddl.ExportScript ORDER BY RelativePath;').Rows
     $expected = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([System.StringComparer]::OrdinalIgnoreCase)
     $sep = [System.IO.Path]::DirectorySeparatorChar
+    $manifestPath = $null; $manifestNew = ''
     foreach ($r in $rows) {
-        $rel = ([string]$r.RelativePath).Replace('/', $sep)
-        $expected[(Join-Path $ExportRoot $rel)] = [string]$r.Content
+        $rel  = ([string]$r.RelativePath).Replace('/', $sep)
+        $full = Join-Path $ExportRoot $rel
+        $expected[$full] = [string]$r.Content
+        if ([string]$r.ObjectType -eq 'Manifest') { $manifestPath = $full; $manifestNew = [string]$r.Content }
+    }
+
+    # --- Verwaltete Ordner: Manifest neu (Snapshot) + alt (Datei) ----------------------
+    function Get-ManifestFolders([string]$Text) {
+        $result = @()
+        foreach ($line in (ConvertTo-Lf $Text).Split("`n")) {
+            $l = $line.Trim()
+            if (-not $l -or $l.StartsWith('#')) { continue }
+            $parts = @($l.Split('/') | Where-Object { $_ })
+            # nur relative Pfade mit mindestens 2 Ebenen (<DB>/<Umgebung>), kein '..'
+            if ($parts.Count -lt 2 -or $parts -contains '..' -or $l -match '^[A-Za-z]:|^[\\/]') { continue }
+            $result += ($parts -join $sep)
+        }
+        return $result
+    }
+    $managed = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    if ($manifestPath) {
+        foreach ($m in (Get-ManifestFolders $manifestNew)) { [void]$managed.Add($m) }
+        if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+            foreach ($m in (Get-ManifestFolders ([System.IO.File]::ReadAllText($manifestPath, $utf8NoBom)))) { [void]$managed.Add($m) }
+        }
+    } else {
+        Write-Log 'WARN' 'Snapshot enthaelt kein Manifest - es wird nichts geloescht.'
     }
 
     $written = 0; $unchanged = 0; $deleted = 0
@@ -175,8 +203,8 @@ try {
         }
     }
 
-    # --- Dateien entfernter Objekte -------------------------------------------------
-    foreach ($d in $managedDirs) {
+    # --- Dateien entfernter Objekte (nur in verwalteten Ordnern) ------------------------
+    foreach ($d in ($managed | Sort-Object)) {
         $root = Join-Path $ExportRoot $d
         if (-not (Test-Path -LiteralPath $root)) { continue }
         $files = Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object { $managedExt -contains $_.Extension.ToLowerInvariant() }
@@ -192,11 +220,17 @@ try {
             }
         }
         if ($Mode -eq 'Export') {
-            # leere Ordner entfernen (tiefste zuerst)
+            # leere Ordner entfernen (tiefste zuerst), danach leere Elternordner bis unterhalb ExportRoot
             Get-ChildItem -LiteralPath $root -Recurse -Directory |
                 Sort-Object { $_.FullName.Length } -Descending |
                 Where-Object { -not (Get-ChildItem -LiteralPath $_.FullName -Force) } |
                 ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
+            $dir = $root
+            while ($dir -and $dir.Length -gt $ExportRoot.Length -and (Test-Path -LiteralPath $dir) -and
+                   -not (Get-ChildItem -LiteralPath $dir -Force)) {
+                Remove-Item -LiteralPath $dir -Force
+                $dir = Split-Path -Parent $dir
+            }
         }
     }
 

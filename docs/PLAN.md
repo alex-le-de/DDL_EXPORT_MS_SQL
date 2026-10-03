@@ -24,6 +24,18 @@ Status: **umgesetzt** (Rev. 2 freigegeben). Betrieb: [BETRIEB.md](BETRIEB.md)
      Git gepflegt und der Export ist nur noch die Kontrolle.
    * `Off`: Job läuft leer.
 
+## 0b. Rev. 3: Ablage je Datenbank und Umgebung
+
+* Ablage `export/<DB>/<Umgebung>/...` statt `export/Databases/<DB>/...`.
+* Mehrere Server (Prod/Test) exportieren in dasselbe Repo. Die Umgebung kommt aus
+  `ddl.ExportSetting.Environment`, je DB überschreibbar. Ein Manifest je Server
+  (`_Server/<Umgebung>/<Server>/manifest.txt`) begrenzt Löschen und DriftCheck auf die
+  eigenen Ordner.
+* Agent-Jobs werden ihrer DB zugeordnet (`<DB>/<Umgebung>/Jobs`), sonst
+  `_Server/<Umgebung>/<Server>/Jobs`.
+* Neu: `database.json` je DB/Umgebung.
+* Abschnitt 3 unten beschreibt den Stand von Rev. 2. Aktuell gilt [BETRIEB.md](BETRIEB.md) 2a.
+
 ## 1. Architektur
 
 ```
