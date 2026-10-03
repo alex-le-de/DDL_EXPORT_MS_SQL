@@ -1,6 +1,6 @@
 # Plan: T-SQL-basierter DDL-Export (Package `DDL_EXPORT_MS_SQL`)
 
-Status: **Phase 1 – zur Freigabe (Rev. 2)**
+Status: **umgesetzt** (Rev. 2 freigegeben). Betrieb: [BETRIEB.md](BETRIEB.md)
 
 ## 0. Leitplanken (Rev. 2)
 
@@ -36,9 +36,10 @@ Status: **Phase 1 – zur Freigabe (Rev. 2)**
 │   ├─ ddl.ExportRun / ExportLog  Lauf-Protokoll                       │
 │   ├─ ddl.ExportScript         Snapshot: 1 Zeile = 1 Datei            │
 │   └─ ddl.usp_Export_Run       Orchestrator                           │
-│        ├─ usp_Script_Schemas / Types / Sequences / Synonyms          │
-│        ├─ usp_Script_Tables   (Spalten, PK, FK, UQ, CK, DF, Indizes) │
-│        ├─ usp_Script_Modules  (Views, Procs, Functions, Trigger)     │
+│        ├─ usp_Catalog_Load    sys.* der Fach-DB -> Staging cat.*     │
+│        ├─ usp_Script_Objects  Schemas, Typen, Sequences, Synonyme,   │
+│        │                      Tabellen, Views, Procs, Functions,     │
+│        │                      Trigger                                │
 │        ├─ usp_Script_ConfigData (deterministische INSERTs)           │
 │        ├─ usp_Script_Catalog  (catalog.jsonl für Agenten)            │
 │        └─ usp_Script_Jobs     (SQL-Agent-Jobs aus msdb)              │

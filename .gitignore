@@ -1,0 +1,6 @@
+# Logs / temporaere Dateien
+*.log
+Logs/
+*.tmp
+.vs/
+.vscode/

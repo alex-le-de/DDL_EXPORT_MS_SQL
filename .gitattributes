@@ -1,0 +1,6 @@
+# SQL-Skripte und Export mit CRLF auschecken (Windows/SSMS), im Repo normalisiert gespeichert
+*.sql    text eol=crlf
+*.jsonl  text eol=crlf
+*.ps1    text eol=crlf
+*.md     text
+*.sh     text eol=lf
