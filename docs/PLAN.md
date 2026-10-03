@@ -1,6 +1,28 @@
 # Plan: T-SQL-basierter DDL-Export (Package `DDL_EXPORT_MS_SQL`)
 
-Status: **Phase 1 – zur Freigabe**
+Status: **Phase 1 – zur Freigabe (Rev. 2)**
+
+## 0. Leitplanken (Rev. 2)
+
+1. **Nur definierte Datenbanken:** Exportiert wird ausschließlich, was in
+   `ddl.ExportDatabase` mit `IsActive = 1` eingetragen ist. Kein Wildcard,
+   keine automatische Erkennung. Ein eingetragener DB-Name, den es auf der
+   Instanz nicht gibt, ergibt eine Warnung im Log. Auch Agent-Jobs werden
+   nur exportiert, wenn ihr Name in `ddl.ExportJob` (LIKE-Muster)
+   eingetragen ist.
+2. **Lokales Dateisystem des SQL Servers, Pfad konfigurierbar:** Der
+   Writer läuft als Agent-Job-Step direkt auf dem SQL-Server-Host. Der
+   Zielpfad steht in `ddl.ExportSetting` (`ExportRoot`, z. B.
+   `L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export`) und lässt sich per
+   Parameter `-ExportRoot` überschreiben.
+3. **Später ist Git die Wahrheit:** Der Export ist ein Übergangs- und
+   Bootstrap-Werkzeug. `ddl.ExportSetting.ExportMode` steuert das Verhalten:
+   * `Export`: Dateien schreiben (Startphase, DB → Git)
+   * `DriftCheck`: nichts schreiben; der Writer vergleicht DB-Stand und
+     Git-Arbeitskopie und meldet Abweichungen (Log + Exit-Code ≠ 0, damit
+     der Job fehlschlägt bzw. benachrichtigt). Ab hier wird DDL manuell in
+     Git gepflegt und der Export ist nur noch die Kontrolle.
+   * `Off`: Job läuft leer.
 
 ## 1. Architektur
 
@@ -42,8 +64,9 @@ Status: **Phase 1 – zur Freigabe**
 
 | Tabelle | Schlüssel | Wichtige Spalten |
 |---|---|---|
-| `ddl.ExportSetting` | `SettingKey` | `SettingValue` (z. B. `ExportRoot`, `ExportJobs`) |
+| `ddl.ExportSetting` | `SettingKey` | `SettingValue` (`ExportRoot`, `ExportMode`) |
 | `ddl.ExportDatabase` | `DatabaseName` | `IsActive`, `FolderName`, `Description` |
+| `ddl.ExportJob` | `JobNamePattern` | `IsActive`, `Description` (LIKE-Muster) |
 | `ddl.ExportConfigTable` | `DatabaseName, SchemaName, TableName` | `IsActive`, `OrderBy` (optional), `ExcludeColumns`, `MaskColumns`, `Description` |
 | `ddl.ExportRun` | `RunId` | `StartedAt`, `FinishedAt`, `Status`, `FileCount`, `ErrorCount` |
 | `ddl.ExportLog` | `LogId` | `RunId`, `LogLevel`, `DatabaseName`, `Message` |
@@ -101,6 +124,9 @@ CLAUDE.md      Hinweise für Agenten
 3. Job `DDL_Export` anlegen, einmal manuell starten, Ergebnis prüfen.
 4. Alten Job `DDL_Export_Statistik` deaktivieren, PS1 archivieren.
 5. Ersten Export in Git committen. Ab dann gilt: kein Diff ohne DB-Änderung.
+6. Umstieg auf Git als Wahrheit: `ExportMode = 'DriftCheck'` setzen.
+   DDL-Änderungen erfolgen dann manuell im Repo, der Job meldet nur noch
+   Abweichungen zwischen DB und Repo.
 
 ## 7. Bekannte Grenzen
 
