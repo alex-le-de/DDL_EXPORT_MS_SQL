@@ -138,6 +138,9 @@ try {
     if (-not $ExportRoot -or $ExportRoot.Trim().Length -lt 4) {
         throw "ExportRoot '$ExportRoot' ist leer oder zu kurz (Schutz vor Schreiben in ein Laufwerks-Root)."
     }
+    if (-not [System.IO.Path]::IsPathRooted($ExportRoot) -or $ExportRoot -match '^[A-Za-z][\\/]') {
+        throw "ExportRoot '$ExportRoot' ist kein absoluter Pfad (z. B. 'L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\export' oder '\\server\freigabe\...'). Bitte ddl.ExportSetting.ExportRoot korrigieren."
+    }
     $ExportRoot = [System.IO.Path]::GetFullPath($ExportRoot)
     if (-not (Test-Path -LiteralPath $ExportRoot)) {
         if ($Mode -eq 'Export') { [void](New-Item -ItemType Directory -Path $ExportRoot -Force) }
