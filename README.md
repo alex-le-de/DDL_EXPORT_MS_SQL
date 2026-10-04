@@ -91,7 +91,10 @@ Kompatibilitätslevel und Collation.
 | `config/Seed_Config.sql` | Datenbanken, Konfig-Tabellen, Job-Muster |
 | `export/` | Ergebnis des Exports, wird vom Writer gepflegt |
 | `tests/` | Testdatenbank und Akzeptanztests (Docker und SQL Server 2022) |
-| `docs/` | Plan, Betrieb, Berechtigungen, Migration |
+| `docs/` | Betriebsdoku des Export-Packages (Installation, Berechtigungen, Migration) |
+| `projects/` | ein Ordner je Vorhaben mit Steckbrief, `docs/` und `sql/` (z. B. DDL-Export, Monitoring) |
+| `memory-bank/` | dauerhafter Kontext für Agenten: Auftrag, Grund-Setting, Architektur, Entscheidungen, Stand |
+| `export/<DB>/README.md` | fachlicher Steckbrief je Datenbank (manuell gepflegt) |
 | `CLAUDE.md` | Hinweise für KI-Agenten |
 
 ## Voraussetzungen

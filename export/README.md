@@ -4,7 +4,8 @@ Dieser Ordner wird von den Agent-Jobs `DDL_Export` der einzelnen Server gepflegt
 (Writer `src/writer/Write-DdlExport.ps1`). Jeder Server schreibt nur in seine eigenen Ordner.
 
 ```
-<DB>/<Umgebung>/                       z. B. BAG/PROD, BAG/TEST
+<DB>/README.md                         fachlicher Steckbrief (manuell, vom Writer nie angefasst)
+<DB>/<Umgebung>/                       z. B. BAG/PROD, BAG/TEST (generiert)
   database.json                        Server, Umgebung, Kompatibilitätslevel, Collation
   catalog.jsonl                        1 JSON-Zeile je Tabelle/View/Prozedur/Funktion (für Agenten)
   Schemas/ Types/ Sequences/ Synonyms/

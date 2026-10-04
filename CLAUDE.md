@@ -1,11 +1,33 @@
 # Hinweise für KI-Agenten
 
-Dieses Repo enthält zwei Dinge:
+## Zuerst lesen
+
+1. `memory-bank/activeContext.md`, `memory-bank/progress.md` und `memory-bank/techContext.md`
+   (Grund-Setting: MS SQL **Standard Edition**, Schnittstellen- und Auswertungsserver,
+   PROD/TEST auf mehreren Servern). Regeln dazu: `memory-bank/README.md`.
+2. Bei Arbeit an einem Vorhaben: `projects/<projekt>/README.md`.
+
+## Wohin mit Dokumenten
+
+* Projektdokumente nur nach `projects/<jahr>-<name>/docs/`. Ein neues Projekt entsteht als Kopie
+  von `projects/_vorlage`.
+* Fachwissen zu einer Datenbank: `export/<DB>/README.md` (Steckbrief, manuell).
+* Betriebsdoku des Export-Packages: `docs/`.
+* Keine neuen Markdown-Dateien im Repo-Root. Vorhandene Dokumente aktualisieren statt neue
+  anlegen. Knapp schreiben.
+* Am Ende einer Arbeitssitzung `memory-bank/activeContext.md` und `progress.md` aktualisieren,
+  Entscheidungen in `memory-bank/decisions.md` eintragen.
+* Entwürfe dürfen keine Enterprise-only-Features voraussetzen (Standard Edition).
+
+## Inhalt des Repos
+
+Dieses Repo enthält:
 
 1. **`export/`**: die exportierte DDL-Struktur der MS-SQL-Datenbanken, je Datenbank und
    Umgebung unter `export/<DB>/<Umgebung>/` (z. B. `export/BAG/PROD`, `export/BAG/TEST`). Das ist die Wissensbasis für Analysen, Code-Generierung und
    Impact-Analysen.
 2. **`src/`, `config/`, `tests/`**: das T-SQL-Package, das diesen Export erzeugt.
+3. **`projects/`** und **`memory-bank/`**: Vorhaben mit ihrer Doku und der dauerhafte Kontext.
 
 ## Struktur durchsuchen
 
@@ -28,7 +50,7 @@ Dieses Repo enthält zwei Dinge:
 
 ## Regeln
 
-* Dateien unter `export/` werden vom Writer des jeweiligen Servers erzeugt, solange
+* Dateien unter `export/<DB>/<Umgebung>/` und `export/_Server/` werden vom Writer des jeweiligen Servers erzeugt, solange
   `ExportMode = 'Export'` gilt. Manuelle Änderungen überschreibt dann der nächste Lauf.
   Im Modus `DriftCheck` ist das Repo führend und Änderungen erfolgen bewusst manuell.
 * Das Dateiformat bleibt erhalten: Kopfzeilen, `GO` nach jeder Anweisung, Reihenfolge

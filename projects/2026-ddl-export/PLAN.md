@@ -1,6 +1,6 @@
 # Plan: T-SQL-basierter DDL-Export (Package `DDL_EXPORT_MS_SQL`)
 
-Status: **umgesetzt** (Rev. 2 freigegeben). Betrieb: [BETRIEB.md](BETRIEB.md)
+Status: **umgesetzt** (Rev. 2 freigegeben). Betrieb: [BETRIEB.md](../../docs/BETRIEB.md)
 
 ## 0. Leitplanken (Rev. 2)
 
@@ -34,7 +34,7 @@ Status: **umgesetzt** (Rev. 2 freigegeben). Betrieb: [BETRIEB.md](BETRIEB.md)
 * Agent-Jobs werden ihrer DB zugeordnet (`<DB>/<Umgebung>/Jobs`), sonst
   `_Server/<Umgebung>/<Server>/Jobs`.
 * Neu: `database.json` je DB/Umgebung.
-* Abschnitt 3 unten beschreibt den Stand von Rev. 2. Aktuell gilt [BETRIEB.md](BETRIEB.md) 2a.
+* Abschnitt 3 unten beschreibt den Stand von Rev. 2. Aktuell gilt [BETRIEB.md](../../docs/BETRIEB.md) 2a.
 
 ## 1. Architektur
 
