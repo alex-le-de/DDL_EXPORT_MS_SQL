@@ -45,7 +45,8 @@ REM vorher Seed_Config.sql anpassen (Konfig-Tabellen eintragen)
 sqlcmd -S EVHNT56 -E -b -I -i Seed_Config.sql -v AdminDb="DDL_Export_Admin"
 
 cd ..\src\job
-sqlcmd -S EVHNT56 -E -b -I -i Create_Job_DDL_Export.sql -v AdminDb="DDL_Export_Admin" WriterScript="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\writer\Write-DdlExport.ps1" JobOwner="sa"
+REM Werte im Block ANPASSEN pruefen (Admin-DB, Writer-Pfad, Job-Owner) - geht auch direkt in SSMS (F5)
+sqlcmd -S EVHNT56 -E -b -I -i Create_Job_DDL_Export.sql
 ```
 
 Auf einem Testserver genauso vorgehen, nur mit `Environment="TEST"`.

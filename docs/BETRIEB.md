@@ -80,11 +80,15 @@ export/
 
 ## 3. Agent-Job
 
+`src/job/Create_Job_DDL_Export.sql` in SSMS öffnen und oben im Block **ANPASSEN** drei Werte
+prüfen: `@AdminDb`, `@WriterScript` (Pfad zum Writer im Repo-Klon) und `@JobOwner`. Danach
+normal ausführen (F5), ein SQLCMD-Modus ist nicht nötig. Alternativ:
+
 ```bat
-cd /d L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\job
-sqlcmd -S EVHNT56 -E -b -I -i Create_Job_DDL_Export.sql -v AdminDb="DDL_Export_Admin" ^
-       WriterScript="L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\writer\Write-DdlExport.ps1" JobOwner="sa"
+sqlcmd -S EVHNT56 -E -b -I -i L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\job\Create_Job_DDL_Export.sql
 ```
+
+Start: `EXEC msdb.dbo.sp_start_job @job_name = N'DDL_Export';`
 
 | Step | Typ | Aufgabe |
 |---|---|---|
