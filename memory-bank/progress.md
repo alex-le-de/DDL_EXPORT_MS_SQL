@@ -22,6 +22,11 @@
   einer offenen Transaktion (SSMS), die später zurückgerollt wurde. Jetzt weist
   `usp_Export_Run` Läufe bei `@@TRANCOUNT > 0` ab. Ein ungültiger `ExportMode` wird protokolliert.
 
+* 2026-10-04: Job-Step 2 scheiterte. Ursachen: ExportRoot ohne Doppelpunkt (`L\...`),
+  ExportMode `DriftCheck` statt `Export`, Admin-DB heißt `DDL_Export`. Außerdem: kein Login `sa`,
+  Agent lehnte das Token `ESCAPE_NONE(SRVR)` ab. Behoben: Job-Owner über die SID, fester
+  Instanzname im Job, Writer lehnt relative Pfade ab.
+
 ## Bekannte Probleme und Grenzen
 
 * Exportierte Skripte sind je Objekt ausführbar, aber nicht nach Abhängigkeiten sortiert

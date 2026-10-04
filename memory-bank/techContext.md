@@ -25,6 +25,15 @@
 | Statistik | Auswertungen/Statistiken | [export/Statistik](../export/Statistik/README.md) |
 | Test | Test-DB (Name, nicht Umgebung) | [export/Test](../export/Test/README.md) |
 
+### Installation DDL-Export auf EVHNT56 (Stand 2026-10-04)
+
+| Einstellung | Wert |
+|---|---|
+| Admin-DB | `DDL_Export` (nicht der Standardname `DDL_Export_Admin`) |
+| ExportRoot | `L:\Datenverarbeitung\DDL_EXPORT` (Freigabe `\\evhnt56\Datenverarbeitung`) |
+| Repo-Klon | `L:\Datenverarbeitung\DDL_EXPORT_MS_SQL` |
+| Zugriff | nur remote (SSMS, Freigabe), keine Anmeldung am Server |
+
 ## Einschränkungen der Standard Edition (relevant für Entwürfe)
 
 * Ressourcen: max. 24 Kerne, Buffer Pool max. 128 GB je Instanz.
