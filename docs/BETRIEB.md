@@ -174,6 +174,21 @@ SELECT RelativePath, ObjectType, LEN(Content) AS Laenge FROM ddl.ExportScript OR
 | Konfig-Tabelle ohne PK | WARN, sortiert wird über alle Spalten. Besser `OrderByColumns` setzen. |
 | Konfig-Tabelle größer als `ConfigDataMaxRows` | WARN. Die Datei enthält nur den Hinweis, keine Daten. |
 | Snapshot leer | Der Writer löscht nichts (Schutz). |
+| Aufruf in offener Transaktion (z. B. SSMS mit `SET IMPLICIT_TRANSACTIONS ON`, `BEGIN TRAN`) | Der Lauf wird mit Fehler abgewiesen. Ohne diesen Schutz würde ein späteres ROLLBACK Lauf, Protokoll und Snapshot verwerfen. |
+| ungültiger `ExportMode` | Der Lauf wird als `Failed` mit ERROR in `ExportLog` protokolliert. |
+
+**`ExportLog` ist leer?** Diese Prüfungen nacheinander durchgehen:
+
+```sql
+USE DDL_Export_Admin;
+SELECT TOP (5) * FROM ddl.ExportRun ORDER BY RunId DESC;      -- gibt es den Lauf überhaupt?
+SELECT @@TRANCOUNT;                                           -- im SSMS-Fenster: 0 erwartet
+EXEC ddl.usp_Export_Run;                                      -- manuell, ohne BEGIN TRAN
+-- Job-Historie: Step 1 (T-SQL) ausgeführt? In welcher Datenbank?
+SELECT h.run_date, h.run_time, h.step_id, h.run_status, LEFT(h.message, 300) AS message
+FROM msdb.dbo.sysjobhistory h JOIN msdb.dbo.sysjobs j ON j.job_id = h.job_id
+WHERE j.name = N'DDL_Export' ORDER BY h.instance_id DESC;
+```
 
 ## 7. Grenzen
 

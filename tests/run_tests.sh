@@ -69,6 +69,10 @@ echo "== 2. Export"
 run && writer > /dev/null && ok "Export + Writer" || fail "Export + Writer"
 n=$(find "$EXP/$P" -type f | wc -l)
 [ "$n" -ge 18 ] && ok "$n Dateien erzeugt" || fail "nur $n Dateien"
+logs=$(sq -d "$ADMIN" -h -1 -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM ddl.ExportLog WHERE RunId = (SELECT MAX(RunId) FROM ddl.ExportRun);" | tr -d ' \r')
+[ "${logs:-0}" -gt 0 ] && ok "ExportLog enthaelt $logs Zeilen zum Lauf" || fail "ExportLog leer"
+sq -d "$ADMIN" -Q "SET IMPLICIT_TRANSACTIONS ON; SELECT 1 FROM ddl.ExportRun WHERE 1 = 0; EXEC ddl.usp_Export_Run; IF @@TRANCOUNT > 0 ROLLBACK;" > /dev/null 2>&1 \
+    && fail "Lauf in offener Transaktion nicht abgewiesen" || ok "Lauf in offener Transaktion wird abgewiesen"
 gitq init -q && gitq add -A && gitq commit -qm base
 
 echo "== 3. Determinismus"

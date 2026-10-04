@@ -16,6 +16,12 @@
 * [ ] Monitoring: Anforderungen → Plan → Umsetzung
 * [ ] Umstieg auf `DriftCheck`, wenn Git führend wird
 
+## Behobene Probleme
+
+* 2026-10-04: `ExportLog` nach Initial-Export leer. Ursache (wahrscheinlich): Der Lauf lief in
+  einer offenen Transaktion (SSMS), die später zurückgerollt wurde. Jetzt weist
+  `usp_Export_Run` Läufe bei `@@TRANCOUNT > 0` ab. Ein ungültiger `ExportMode` wird protokolliert.
+
 ## Bekannte Probleme und Grenzen
 
 * Exportierte Skripte sind je Objekt ausführbar, aber nicht nach Abhängigkeiten sortiert

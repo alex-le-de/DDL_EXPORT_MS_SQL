@@ -30,10 +30,27 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT OFF;
 
+    /*
+        Nicht innerhalb einer offenen Transaktion laufen: ein spaeteres ROLLBACK (z. B. SSMS mit
+        SET IMPLICIT_TRANSACTIONS ON, Fenster ohne COMMIT geschlossen) wuerde Lauf, Protokoll und
+        Snapshot stillschweigend verwerfen.
+    */
+    IF @@TRANCOUNT > 0
+    BEGIN
+        RAISERROR (N'ddl.usp_Export_Run darf nicht in einer offenen Transaktion laufen (@@TRANCOUNT = %d). Transaktion beenden bzw. SET IMPLICIT_TRANSACTIONS OFF setzen.', 16, 1, @@TRANCOUNT);
+        RETURN;
+    END;
+
     DECLARE @mode varchar(20) = ISNULL((SELECT CAST(SettingValue AS varchar(20)) FROM ddl.ExportSetting WHERE SettingKey = 'ExportMode'), 'Export');
     IF @mode NOT IN ('Export', 'DriftCheck', 'Off')
     BEGIN
-        RAISERROR (N'Ungueltiger ExportMode ''%s'' (erlaubt: Export, DriftCheck, Off).', 16, 1, @mode);
+        -- auch diesen Fehler protokollieren, damit ein Lauf nie spurlos bleibt
+        INSERT INTO ddl.ExportRun (ExportMode, Status, FinishedAt, FileCount, WarningCount, ErrorCount)
+        VALUES (LEFT(@mode, 20), 'Failed', SYSDATETIME(), 0, 0, 1);
+        SET @RunId = SCOPE_IDENTITY();
+        DECLARE @modeMsg nvarchar(4000) = N'Ungueltiger ExportMode ''' + CAST(@mode AS nvarchar(20)) + N''' (erlaubt: Export, DriftCheck, Off).';
+        EXEC ddl.usp_Log @RunId, 'ERROR', @modeMsg;
+        RAISERROR (N'%s', 16, 1, @modeMsg);
         RETURN;
     END;
 
