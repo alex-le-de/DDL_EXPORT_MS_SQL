@@ -29,7 +29,8 @@
     Exit-Codes: 0 = OK, 1 = Fehler, 2 = Drift erkannt (nur DriftCheck).
 
 .PARAMETER SqlInstance
-    SQL-Server-Instanz (Windows-Authentifizierung). Im Agent-Job: $(ESCAPE_NONE(SRVR)).
+    SQL-Server-Instanz (Windows-Authentifizierung). Im Agent-Job wird der Instanzname beim
+    Anlegen des Jobs fest eingetragen (src/job/Create_Job_DDL_Export.sql).
 
 .PARAMETER AdminDatabase
     Name der Admin-DB (Standard: DDL_Export_Admin).

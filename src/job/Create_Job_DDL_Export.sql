@@ -47,11 +47,12 @@ BEGIN
 END;
 
 DECLARE @jobId binary(16);
--- Agent-Token: wird zur Laufzeit durch den Servernamen ersetzt (zusammengesetzt, damit sqlcmd es nicht als Variable auswertet)
-DECLARE @srvToken nvarchar(50) = N'$' + N'(ESCAPE_NONE(SRVR))';
+-- Instanzname wird beim Anlegen fest eingetragen (keine Agent-Token wie ESCAPE_NONE(SRVR),
+-- die je nach Agent-Einstellung abgelehnt werden). Nach Umbenennen/Umzug Skript erneut ausfuehren.
+DECLARE @instance nvarchar(128) = CAST(SERVERPROPERTY('ServerName') AS nvarchar(128));
 DECLARE @writerCmd nvarchar(4000) =
     N'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + @WriterScript + N'"'
-    + N' -SqlInstance "' + @srvToken + N'" -AdminDatabase "' + @AdminDb + N'"';
+    + N' -SqlInstance "' + @instance + N'" -AdminDatabase "' + @AdminDb + N'"';
 DECLARE @descr nvarchar(512) =
     N'DDL-Export (T-SQL) der in ' + @AdminDb + N'.ddl.ExportDatabase konfigurierten Datenbanken ins Git-Arbeitsverzeichnis. Repo: DDL_EXPORT_MS_SQL. Git-Commit/Push manuell.';
 
