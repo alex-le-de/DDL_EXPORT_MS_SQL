@@ -21,19 +21,30 @@ USE [msdb];
 /* ======================= ANPASSEN ======================= */
 DECLARE @AdminDb      sysname        = N'DDL_Export_Admin';
 DECLARE @WriterScript nvarchar(500)  = N'L:\Datenverarbeitung\DDL_EXPORT_MS_SQL\src\writer\Write-DdlExport.ps1';
-DECLARE @JobOwner     sysname        = N'sa';
+DECLARE @JobOwner     sysname        = NULL;   -- NULL = eingebautes sa-Login (auch wenn umbenannt), sonst z. B. N'DOMAIN\svc_sql'
 /* ======================================================== */
+
+IF @JobOwner IS NULL SET @JobOwner = SUSER_SNAME(0x01);   -- SID 0x01 = sa, unabhaengig vom Namen
 
 IF DB_ID(@AdminDb) IS NULL
 BEGIN
     RAISERROR (N'Admin-DB %s existiert nicht - zuerst src\install\Install.sql ausfuehren.', 16, 1, @AdminDb);
     RETURN;
 END;
+IF SUSER_ID(@JobOwner) IS NULL
+BEGIN
+    RAISERROR (N'Login %s fuer @JobOwner existiert nicht. Gueltiges Login eintragen (SELECT name FROM sys.server_principals WHERE type IN (''S'',''U'')).', 16, 1, @JobOwner);
+    RETURN;
+END;
 
+DECLARE @rc int = 0;
 BEGIN TRANSACTION;
 
 IF EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = N'DDL_Export')
-    EXEC msdb.dbo.sp_delete_job @job_name = N'DDL_Export', @delete_unused_schedule = 1;
+BEGIN
+    EXEC @rc = msdb.dbo.sp_delete_job @job_name = N'DDL_Export', @delete_unused_schedule = 1;
+    IF @@ERROR <> 0 OR @rc <> 0 GOTO Fehler;
+END;
 
 DECLARE @jobId binary(16);
 -- Agent-Token: wird zur Laufzeit durch den Servernamen ersetzt (zusammengesetzt, damit sqlcmd es nicht als Variable auswertet)
@@ -44,7 +55,7 @@ DECLARE @writerCmd nvarchar(4000) =
 DECLARE @descr nvarchar(512) =
     N'DDL-Export (T-SQL) der in ' + @AdminDb + N'.ddl.ExportDatabase konfigurierten Datenbanken ins Git-Arbeitsverzeichnis. Repo: DDL_EXPORT_MS_SQL. Git-Commit/Push manuell.';
 
-EXEC msdb.dbo.sp_add_job
+EXEC @rc = msdb.dbo.sp_add_job
     @job_name              = N'DDL_Export',
     @enabled               = 1,
     @description           = @descr,
@@ -52,8 +63,9 @@ EXEC msdb.dbo.sp_add_job
     @owner_login_name      = @JobOwner,
     @notify_level_eventlog = 2,
     @job_id                = @jobId OUTPUT;
+IF @@ERROR <> 0 OR @rc <> 0 GOTO Fehler;
 
-EXEC msdb.dbo.sp_add_jobstep @job_id = @jobId,
+EXEC @rc = msdb.dbo.sp_add_jobstep @job_id = @jobId,
     @step_id           = 1,
     @step_name         = N'1 - Snapshot erzeugen (T-SQL)',
     @subsystem         = N'TSQL',
@@ -61,8 +73,9 @@ EXEC msdb.dbo.sp_add_jobstep @job_id = @jobId,
     @command           = N'EXEC ddl.usp_Export_Run;',
     @on_success_action = 3,   -- weiter mit naechstem Step
     @on_fail_action    = 2;   -- Job mit Fehler beenden
+IF @@ERROR <> 0 OR @rc <> 0 GOTO Fehler;
 
-EXEC msdb.dbo.sp_add_jobstep @job_id = @jobId,
+EXEC @rc = msdb.dbo.sp_add_jobstep @job_id = @jobId,
     @step_id           = 2,
     @step_name         = N'2 - Dateien schreiben / DriftCheck (PowerShell)',
     @subsystem         = N'CmdExec',
@@ -70,18 +83,27 @@ EXEC msdb.dbo.sp_add_jobstep @job_id = @jobId,
     @cmdexec_success_code = 0,
     @on_success_action = 1,   -- Job erfolgreich beenden
     @on_fail_action    = 2;
+IF @@ERROR <> 0 OR @rc <> 0 GOTO Fehler;
 
-EXEC msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1;
+EXEC @rc = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1;
+IF @@ERROR <> 0 OR @rc <> 0 GOTO Fehler;
 
-EXEC msdb.dbo.sp_add_jobschedule @job_id = @jobId,
+EXEC @rc = msdb.dbo.sp_add_jobschedule @job_id = @jobId,
     @name               = N'Taeglich_0200',
     @enabled            = 0,
     @freq_type          = 4,      -- taeglich
     @freq_interval      = 1,
     @freq_subday_type   = 1,      -- einmal
     @active_start_time  = 20000;  -- 02:00:00
+IF @@ERROR <> 0 OR @rc <> 0 GOTO Fehler;
 
-EXEC msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)';
+EXEC @rc = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)';
+IF @@ERROR <> 0 OR @rc <> 0 GOTO Fehler;
 
 COMMIT TRANSACTION;
-PRINT N'Job DDL_Export angelegt (Zeitplan deaktiviert). Start: EXEC msdb.dbo.sp_start_job @job_name = N''DDL_Export'';';
+PRINT N'Job DDL_Export angelegt (Owner ' + @JobOwner + N', Zeitplan deaktiviert). Start: EXEC msdb.dbo.sp_start_job @job_name = N''DDL_Export'';';
+RETURN;
+
+Fehler:
+IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+RAISERROR (N'Job DDL_Export wurde NICHT angelegt - siehe vorherige Fehlermeldung.', 16, 1);

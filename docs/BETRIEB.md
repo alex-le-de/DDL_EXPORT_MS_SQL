@@ -81,7 +81,9 @@ export/
 ## 3. Agent-Job
 
 `src/job/Create_Job_DDL_Export.sql` in SSMS öffnen und oben im Block **ANPASSEN** drei Werte
-prüfen: `@AdminDb`, `@WriterScript` (Pfad zum Writer im Repo-Klon) und `@JobOwner`. Danach
+prüfen: `@AdminDb`, `@WriterScript` (Pfad zum Writer im Repo-Klon) und `@JobOwner`.
+`@JobOwner = NULL` nimmt das eingebaute sa-Login, auch wenn es umbenannt ist (SID `0x01`).
+Alternativ ein vorhandenes Login wie `DOMAIN\svc_sql` eintragen. Bei einem Fehler wird nichts angelegt (Rollback). Danach
 normal ausführen (F5), ein SQLCMD-Modus ist nicht nötig. Alternativ:
 
 ```bat
