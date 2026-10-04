@@ -41,9 +41,11 @@ GO
 MERGE ddl.ExportConfigTable AS t
 USING (VALUES
     -- (DatabaseName,  SchemaName, TableName,        OrderByColumns, ExcludeColumns, MaskColumns, Description)
-    -- (N'Statistik',  N'dbo',     N'Konfiguration', NULL,           NULL,           NULL,        N'Beispiel'),
-    -- (N'BAG',        N'dbo',     N'Settings',      NULL,           N'GeaendertAm', N'Passwort', N'Beispiel'),
-    (NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+    (N'Statistik',  N'dbo',     N'SDTS_Abgleich_Kategorie',  NULL, NULL, NULL, N'SDTS-Abgleich: Kategorien'),
+    (N'Statistik',  N'dbo',     N'SDTS_Abgleich_Konfig',     NULL, NULL, NULL, N'SDTS-Abgleich: Konfiguration'),
+    (N'Statistik',  N'dbo',     N'SDTS_Abgleich_SST_Status', NULL, NULL, NULL, N'SDTS-Abgleich: Schnittstellen-Status')
+    -- Beispiel mit Optionen:
+    -- (N'BAG',     N'dbo',     N'Settings',      NULL,  N'GeaendertAm', N'Passwort', N'Beispiel')
 ) AS s (DatabaseName, SchemaName, TableName, OrderByColumns, ExcludeColumns, MaskColumns, Description)
 ON t.DatabaseName = s.DatabaseName AND t.SchemaName = s.SchemaName AND t.TableName = s.TableName
 WHEN NOT MATCHED AND s.DatabaseName IS NOT NULL THEN

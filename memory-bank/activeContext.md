@@ -14,7 +14,7 @@ Stand: 2026-10-04
 1. PR #1 prüfen und mergen.
 2. Installation auf `EVHNT56` (Umgebung PROD?), erster Export, Commit. Siehe
    [docs/BETRIEB.md](../docs/BETRIEB.md).
-3. Konfigurationstabellen je DB in `config/Seed_Config.sql` eintragen.
+3. Konfigurationstabellen je DB in `config/Seed_Config.sql` eintragen (Statistik: erledigt, SDTS_Abgleich_*; restliche DBs offen).
 4. Testserver-Namen klären, dort mit `Environment="TEST"` installieren.
 5. Projekt Monitoring: Anforderungen klären (siehe offene Fragen dort) und Plan erstellen.
 

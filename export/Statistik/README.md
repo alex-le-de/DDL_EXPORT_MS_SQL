@@ -19,7 +19,7 @@
 
 ## Wichtige Objekte
 
-* Konfigurationstabellen: offen (Export über `ddl.ExportConfigTable`)
+* Konfigurationstabellen (Export über `ddl.ExportConfigTable`, Daten unter `<Umgebung>/ConfigData/`): `dbo.SDTS_Abgleich_Kategorie`, `dbo.SDTS_Abgleich_Konfig`, `dbo.SDTS_Abgleich_SST_Status`
 * Zentrale Prozeduren/Jobs: offen
 
 ## Hinweise
