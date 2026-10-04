@@ -130,7 +130,7 @@ BEGIN
                     SET @cnt = @@ROWCOUNT;
                 COMMIT TRANSACTION;
 
-                SET @msg = CAST(@cnt AS nvarchar(10)) + N' Dateien erzeugt.';
+                SET @msg = CAST(@cnt AS nvarchar(10)) + N' Skripte im Snapshot erzeugt (Dateien schreibt der Writer, Step 2).';
                 EXEC ddl.usp_Log @RunId, 'INFO', @msg, @db;
             END TRY
             BEGIN CATCH
@@ -201,9 +201,11 @@ BEGIN
         Status       = CASE WHEN @errs > 0 THEN 'Failed' WHEN @warn > 0 THEN 'Warning' ELSE 'Succeeded' END
     WHERE RunId = @RunId;
 
-    SET @msg = N'Lauf beendet: ' + CAST(@files AS nvarchar(10)) + N' Dateien im Snapshot, '
+    SET @msg = N'Lauf beendet: ' + CAST(@files AS nvarchar(10)) + N' Skripte im Snapshot, '
              + CAST(@warn AS nvarchar(10)) + N' Warnungen, ' + CAST(@errs AS nvarchar(10)) + N' Fehler.';
     EXEC ddl.usp_Log @RunId, 'INFO', @msg;
+    IF @mode = 'DriftCheck'
+        EXEC ddl.usp_Log @RunId, 'INFO', N'ExportMode = DriftCheck: der Writer schreibt KEINE Dateien, er meldet nur Abweichungen. Fuer den Export: ExportMode = Export.';
 
     IF @errs > 0
         RAISERROR (N'DDL-Export Lauf %d mit %d Fehler(n) beendet - siehe ddl.ExportLog.', 16, 1, @RunId, @errs);
